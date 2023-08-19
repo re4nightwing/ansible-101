@@ -1,0 +1,47 @@
+---
+- name: Manage Users
+  hosts: webserver
+  become: true
+  become_method: sudo
+  become_user: root
+  become_flags: "-H"
+  vars:
+    ansible_become_password: good
+  tasks:
+    - name: Read user configuration file
+      slurp:
+        src: "user_info.txt"
+      register: config_file_content
+    
+    - name: Split file content into lines
+      set_fact:
+        user_config_lines: "{{ config_file_content['content'] | b64decode | splitlines() }}"
+
+    - name: Create user groups
+      group:
+        name: "{{ item.split(',')[1] }}"
+        state: present
+      loop: "{{ user_config_lines }}"
+      when: item.split(',')[2] == 'true'
+    
+    - name: Create users
+      user:
+        name: "{{ item.split(',')[0] }}"
+        groups: "{{ item.split(',')[1] }}"
+        createhome: yes
+      loop: "{{ user_config_lines }}"
+      when: item.split(',')[2] == 'true'
+    
+    - name: Add SSH public key for users
+      authorized_key:
+        user: "{{ item.split(',')[0] }}"
+        state: present
+        key: "{{ lookup('file', '/home/r4nw/.ssh/id_rsa.pub') }}"
+      loop: "{{ user_config_lines }}"
+      when: item.split(',')[2] == 'true'
+    
+    - name: Update user limits
+      debug:
+        msg: "Updating user limits for {{ item.split(',')[0] }}"
+      loop: "{{ user_config_lines }}"
+      when: item.split(',')[2] == 'true'
