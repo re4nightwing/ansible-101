@@ -1,2 +1,2 @@
 [webserver]
-192.168.56.20 ansible_user=user01 apache_package=httpd php_package=php
+192.168.56.20 ansible_user=user01

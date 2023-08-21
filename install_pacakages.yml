@@ -1,0 +1,18 @@
+---
+- name: Install packages
+  hosts: webserver
+  become: true
+  tasks:
+    - name: Install packages(CentOS)
+      yum:
+        name: 
+          - tcpdump
+          - curl
+          - wget
+          - screen
+          - dos2unix
+          - nmap
+          - net-tools
+          - ntp
+        state: latest
+      when: ansible_distribution == "CentOS"

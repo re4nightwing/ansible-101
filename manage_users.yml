@@ -2,26 +2,22 @@
 - name: Manage Users
   hosts: webserver
   become: true
-  become_method: sudo
-  become_user: root
-  become_flags: "-H"
-  vars:
-    ansible_become_password: good
-  tasks:
+  pre_tasks:
     - name: Read user configuration file
-      slurp:
-        src: "user_info.txt"
-      register: config_file_content
-    
-    - name: Split file content into lines
       set_fact:
-        user_config_lines: "{{ config_file_content['content'] | b64decode | splitlines() }}"
+        config_file_content: "{{ lookup('file', '/home/r4nw/project/ansible/user_info.txt') }}"
 
+    - name: print debug
+      debug:
+        msg: "{{ item.split(',') }}"
+      loop: "{{ config_file_content.split('\n') }}"
+      
+  tasks:
     - name: Create user groups
       group:
         name: "{{ item.split(',')[1] }}"
         state: present
-      loop: "{{ user_config_lines }}"
+      loop: "{{ config_file_content.split('\n') }}"
       when: item.split(',')[2] == 'true'
     
     - name: Create users
@@ -29,7 +25,8 @@
         name: "{{ item.split(',')[0] }}"
         groups: "{{ item.split(',')[1] }}"
         createhome: yes
-      loop: "{{ user_config_lines }}"
+        append: yes
+      loop: "{{ config_file_content.split('\n') }}"
       when: item.split(',')[2] == 'true'
     
     - name: Add SSH public key for users
@@ -37,11 +34,23 @@
         user: "{{ item.split(',')[0] }}"
         state: present
         key: "{{ lookup('file', '/home/r4nw/.ssh/id_rsa.pub') }}"
-      loop: "{{ user_config_lines }}"
+      loop: "{{ config_file_content.split('\n') }}"
       when: item.split(',')[2] == 'true'
     
-    - name: Update user limits
-      debug:
-        msg: "Updating user limits for {{ item.split(',')[0] }}"
-      loop: "{{ user_config_lines }}"
+    - name: Update user openfile limits
+      pam_limits:
+        domain: "{{ item.split(',')[0] }}"
+        limit_type: hard
+        limit_item: nofile
+        value: "{{ item.split(',')[3] }}"
+      loop: "{{ config_file_content.split('\n') }}"
+      when: item.split(',')[2] == 'true'
+
+    - name: Update user process limits
+      pam_limits:
+        domain: "{{ item.split(',')[0] }}"
+        limit_type: hard
+        limit_item: nproc
+        value: "{{ item.split(',')[4] }}"
+      loop: "{{ config_file_content.split('\n') }}"
       when: item.split(',')[2] == 'true'
