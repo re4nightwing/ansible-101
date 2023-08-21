@@ -25,6 +25,12 @@
         state: latest
       when: ansible_distribution == "CentOS"
 
+    - name: Restart service httpd
+      service:
+        name: httpd
+        state: started
+      when: ansible_distribution == "CentOS"
+
     - name: install apache package with php [Ubuntu/Debian]
       apt:
         name:
