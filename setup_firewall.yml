@@ -5,16 +5,21 @@
   gather_facts: false
   tasks:
     - name: Allow SSH from hSenid Mobile LAN
-      ansible.builtin.firewalld:
-        rich_rule: 'rule family="ipv4" source address="172.16.1.0/22" service name="ssh" accept'
+      firewalld:
+        rich_rule: 'rule family="ipv4" source address="172.16.0.0/22" service name="ssh" accept'
         permanent: yes
         state: enabled
 
     - name: Allow ports 80 and 443
-      ansible.builtin.firewalld:
+      firewalld:
         port: "{{ item }}/tcp"
         permanent: yes
         state: enabled
       loop:
         - 80
         - 443
+
+    - name: Restart service firewalld
+      service:
+        name: firewalld
+        state: restarted
